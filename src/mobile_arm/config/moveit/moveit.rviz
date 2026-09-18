@@ -1,0 +1,29 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/RobotModel
+      Description Topic:
+        Depth: 5
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot_description
+      Name: RobotModel
+    - Class: moveit_rviz_plugin/MotionPlanning
+      Name: MotionPlanning
+      Robot Description: robot_description
+      Planning Scene Topic: /monitored_planning_scene
+      Planning Group: ur_manipulator
+  Global Options:
+    Fixed Frame: world
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Name: Current View
+      Distance: 2.0
+      Pitch: 0.5
+      Yaw: 0.5

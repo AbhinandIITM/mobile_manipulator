@@ -14,7 +14,9 @@ def generate_launch_description():
             ])
         ]),
         launch_arguments={
-            'setup_path': PathJoinSubstitution([FindPackageShare('j100_sim'), 'config'])
+            'setup_path': PathJoinSubstitution([FindPackageShare('j100_sim'), 'config']),
+            'world': 'empty'
+            # 'world': 'warehouse'
         }.items()
     )
 

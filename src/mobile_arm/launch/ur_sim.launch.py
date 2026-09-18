@@ -123,6 +123,18 @@ def generate_launch_description():
         ],
         output="screen",
     )
+    ik_node = Node(
+        package="mobile_arm",
+        executable="ik_node",
+        name="ik_node",
+        parameters=[
+            {
+                "use_sim_time": True,
+            }
+        ],
+        output="screen",
+    )
+
     nodes = [
         gazebo_launch,
         clock_bridge,
@@ -130,8 +142,9 @@ def generate_launch_description():
         spawn_entity,
         joint_state_broadcaster_spawner,
         joint_trajectory_controller_spawner,
-        joint_state_publisher_gui_node,
-        joint_state_to_trajectory_node,
+        # joint_state_publisher_gui_node,
+        # joint_state_to_trajectory_node,
+        ik_node,
     ]
 
     return LaunchDescription(declared_arguments + nodes)

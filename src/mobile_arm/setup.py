@@ -2,7 +2,7 @@ import os
 from glob import glob
 from setuptools import find_packages, setup
 
-package_name = 'j100_sim'
+package_name = 'mobile_arm'
 
 data_files = [
     ('share/ament_index/resource_index/packages',
@@ -31,12 +31,12 @@ setup(
     name=package_name,
     version='0.0.0',
     packages=find_packages(exclude=['test']),
-    data_files=package_files(data_files, ['config/', 'launch/']),
+    data_files=package_files(data_files, ['urdf/', 'meshes/', 'config/', 'launch/']),
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='abhi',
     maintainer_email='abhinandt2017@gmail.com',
-    description='j100_sim package',
+    description='mobile_arm description',
     license='TODO: License declaration',
     extras_require={
         'test': [
@@ -44,7 +44,9 @@ setup(
         ],
     },
     entry_points={
-        'console_scripts': [
-        ],
-    },
+    'console_scripts': [
+        'joint_state_to_trajectory = mobile_arm.joint_state_to_trajectory:main',
+        'ik_node = mobile_arm.ik_node:main',
+    ],
+},
 )
