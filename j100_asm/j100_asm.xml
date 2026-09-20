@@ -52,10 +52,10 @@
         </body>
     </worldbody>
     <actuator>
-        <velocity name="FL_motor" joint="base_Revolute-4" gear="1" kv="10" ctrlrange="-10 10" />
-        <velocity name="FR_motor" joint="base_Revolute-5" gear="-1" kv="10" ctrlrange="-10 10" />
-        <velocity name="RR_motor" joint="base_Revolute-6" gear="-1" kv="10" ctrlrange="-10 10" />
-        <velocity name="RL_motor" joint="base_Revolute-7" gear="1" kv="10" ctrlrange="-10 10" />
+        <velocity name="FL_motor" joint="base_Revolute-4" gear="1" kv="10" ctrlrange="-25 25" />
+        <velocity name="FR_motor" joint="base_Revolute-5" gear="-1" kv="10" ctrlrange="-25 25" />
+        <velocity name="RR_motor" joint="base_Revolute-6" gear="-1" kv="10" ctrlrange="-25 25" />
+        <velocity name="RL_motor" joint="base_Revolute-7" gear="1" kv="10" ctrlrange="-25 25" />
     </actuator>
     <sensor>
         <gyro name="imu_gyro" site="imu_site" />

@@ -118,7 +118,10 @@ def main():
         choices=["static", "moving", "waypoints"],
         help="Target scenario: 'static', 'moving', or 'waypoints'",
     )
-    parser.add_argument("--v_max", type=float, default=1.2, help="Max cruising forward velocity (m/s)")
+    parser.add_argument("--v_max", type=float, default=2.0, help="Max cruising forward velocity (m/s)")
+    parser.add_argument("--d_stop", type=float, default=None, help="Target standoff distance in meters (default: 0.80m)")
+    parser.add_argument("--duration", type=float, default=None, help="Max simulation duration in seconds (optional)")
+    parser.add_argument("--headless", action="store_true", help="Run without opening GUI viewers")
     parser.add_argument("--no_cv", action="store_true", help="Disable live OpenCV HUD window")
     args = parser.parse_args()
 
@@ -146,14 +149,26 @@ def main():
 
     sensors = SensorManager(model)
     detector = VisualDetector(width=320, height=240, fovy_deg=60.0)
-    # Dynamic stop distance: 0.4m for continuous waypoint patrol, 0.8m for static/moving target docking
-    d_stop = 0.4 if args.scenario == "waypoints" else 0.8
+
+    # Target convergence distance
+    if args.d_stop is not None:
+        target_dist = args.d_stop
+    elif args.scenario == "moving":
+        target_dist = 0.80   # Default 0.80m standoff for moving targets
+    elif args.scenario == "waypoints":
+        target_dist = 0.50   # 0.50m waypoint standoff
+    else:
+        target_dist = 0.80   # 0.80m static target docking
+
     guidance = LOSGuidanceSystem(
         v_max=args.v_max,
-        w_max=3.0,
-        d_stop=d_stop,
-        kp_los=3.0,
-        kd_gyro=0.35,
+        w_max=4.0,
+        target_distance=target_dist,
+        kp_range=2.0,
+        ki_range=1.0,
+        kp_los=3.5,
+        ki_los=1.8,
+        kd_gyro=0.30,
         track_width=0.368,
         slip_factor=0.30,
     )
@@ -193,12 +208,28 @@ def main():
     latest_detection = {"detected": False, "lambda_vis": 0.0, "range_vis": 0.0, "u": 160.0, "v": 120.0, "bbox": None}
     latest_telem = {"mode": "INIT", "los_angle": 0.0, "target_range": 5.0, "v_cmd": 0.0, "w_cmd": 0.0}
 
-    with mujoco.viewer.launch_passive(model, data) as viewer:
-        viewer.cam.distance = 9.0
-        viewer.cam.elevation = -40.0
-        viewer.cam.azimuth = 135.0
+    class NullViewer:
+        def __init__(self):
+            self.cam = type("Cam", (), {"distance": 0, "elevation": 0, "azimuth": 0, "lookat": [0, 0, 0]})()
+        def is_running(self):
+            return True
+        def sync(self):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
 
-        while viewer.is_running():
+    max_duration = args.duration if args.duration is not None else float("inf")
+    viewer_ctx = NullViewer() if args.headless else mujoco.viewer.launch_passive(model, data)
+
+    with viewer_ctx as viewer:
+        if not args.headless:
+            viewer.cam.distance = 9.0
+            viewer.cam.elevation = -40.0
+            viewer.cam.azimuth = 135.0
+
+        while viewer.is_running() and data.time < max_duration:
             step_start = time.time()
             t = data.time
 
@@ -293,15 +324,16 @@ def main():
                     print(
                         f"t={t:5.1f}s | Mode: {latest_telem['mode']:9s} | "
                         f"LOS Angle: {np.degrees(latest_telem['los_angle']):5.1f}° | "
-                        f"Range: {latest_telem['target_range']:4.1f}m | "
+                        f"Distance: {latest_telem['target_range']:4.2f}m | "
                         f"v_cmd: {v_cmd:4.2f}m/s | w_cmd: {w_cmd:4.2f}rad/s",
                         flush=True,
                     )
 
-            # Keep real-time pace
-            time_until_next_step = dt - (time.time() - step_start)
-            if time_until_next_step > 0:
-                time.sleep(time_until_next_step)
+            # Keep real-time pace when viewing
+            if not args.headless:
+                time_until_next_step = dt - (time.time() - step_start)
+                if time_until_next_step > 0:
+                    time.sleep(time_until_next_step)
 
     # Clean up OpenCV windows
     if not args.no_cv:
