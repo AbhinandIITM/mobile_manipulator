@@ -1,0 +1,72 @@
+<mujoco model="j100_asm">
+    <compiler angle="radian" />
+    <asset>
+        <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072" />
+        <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8" width="300" height="300" />
+        <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2" />
+        <mesh name="livery" file="meshes/livery.stl" scale="0.001 0.001 0.001" />
+        <mesh name="base" file="meshes/base.stl" scale="0.001 0.001 0.001" />
+        <mesh name="top" file="meshes/top.stl" scale="0.001 0.001 0.001" />
+        <mesh name="FL" file="meshes/FL.stl" scale="0.001 0.001 0.001" />
+        <mesh name="FR" file="meshes/FR.stl" scale="0.001 0.001 0.001" />
+        <mesh name="RR" file="meshes/RR.stl" scale="0.001 0.001 0.001" />
+        <mesh name="RL" file="meshes/RL.stl" scale="0.001 0.001 0.001" />
+    </asset>
+    <worldbody>
+        <light directional="true" pos="-0.5 0.5 3" dir="0 0 -1" />
+        <geom pos="0 0 0" size="50 50 0.1" type="plane" material="groundplane" />
+        <body name="base" pos="0.0 0.0 0.2" euler="-0.0 0.0 -0.0">
+            <freejoint />
+            <geom name="base_geom" type="mesh" mesh="base" pos="0 0 0" euler="0 0 0" />
+            <inertial mass="36.20539010276065" pos="0.01041188162970131 0.008107826423357854 0.06341989467560313" fullinertia="0.3107485685137761 0.5492777361424788 0.7134985212489986 0.005612227409844857 -0.029454742050772066 0.009180628857824245" />
+            <body name="livery" pos="-5.684341886080802e-16 3.3125001023791555e-17 0.008000000000000753" euler="-3.422092399804062e-15 0.0 -0.0">
+                <geom name="livery_geom" type="mesh" mesh="livery" pos="0 0 0" euler="0 0 0" />
+                <inertial mass="1.6355089027887084" pos="0.008272392789356816 -7.85759106180281e-16 0.13971757371037127" fullinertia="0.036925930636843934 0.05255797419991475 0.08870492006794321 -2.479254404509637e-06 0.00016370168818594837 -2.737951323549666e-16" />
+            </body>
+            <body name="top" pos="-0.0075 1.7763568394002505e-17 -0.0036289999999999977" euler="-0.0 0.0 -0.0">
+                <geom name="top_geom" type="mesh" mesh="top" pos="0 0 0" euler="0 0 0" />
+                <inertial mass="8.219496024208457" pos="0.024616257649692233 -9.867405408607533e-15 0.18520838993575667" fullinertia="0.06949235093957518 0.14485192863328505 0.2118647480257517 -1.369391556378919e-14 0.000926325295573769 -1.776082518436883e-15" />
+            </body>
+            <body name="FL" pos="-0.13099999999999906 -0.184 0.034499999999999996" euler="1.5707963267948966 0.0 -0.0">
+                <joint name="base_Revolute-4" type="hinge" axis="0.0 0.0 0.9999999999999997" pos="-9.43689570931383e-16 6.938893903907226e-18 -0.018999999999999982" />
+                <geom name="FL_geom" type="mesh" mesh="FL" pos="0 0 0" euler="0 0 0" />
+                <inertial mass="8.699180035251814" pos="-3.552713678800501e-17 -4.884981308350687e-17 -0.0" fullinertia="0.024446212669388734 0.02444621266938883 0.04622270375553694 -7.632783294297949e-17 2.7755575615628904e-17 -1.3877787807814448e-17" />
+            </body>
+            <body name="FR" pos="-0.13099999999999906 0.184 0.034499999999999996" euler="1.5707963267948966 0.0 -0.0">
+                <joint name="base_Revolute-5" type="hinge" axis="0.0 0.0 -1.0" pos="-9.43689570931383e-16 6.938893903907228e-18 0.01899999999999999" />
+                <geom name="FR_geom" type="mesh" mesh="FR" pos="0 0 0" euler="0 0 0" />
+                <inertial mass="8.699180035251814" pos="-3.552713678800501e-17 -4.884981308350689e-17 -0.0" fullinertia="0.024446212669388734 0.024446212669388845 0.046222703755537 -7.632783294297951e-17 -2.7755575615628914e-17 -6.938893903907228e-18" />
+            </body>
+            <body name="RR" pos="0.13099999999999995 0.1840000000000001 0.034499999999999996" euler="1.5707963267948966 0.0 -0.0">
+                <joint name="base_Revolute-6" type="hinge" axis="0.0 2.524354896707238e-29 -1.0000000000000013" pos="5.551115123125783e-17 6.938893903906758e-18 0.019000000000000124" />
+                <geom name="RR_geom" type="mesh" mesh="RR" pos="0 0 0" euler="0 0 0" />
+                <inertial mass="8.699180035251814" pos="-3.552713678800501e-17 -4.8849813083506956e-17 -1.233142648605839e-45" fullinertia="0.02444621266938879 0.024446212669388907 0.04622270375553718 -6.245004513516514e-17 -2.775557561562895e-17 -2.7755575615629536e-17" />
+            </body>
+            <body name="RL" pos="0.13099999999999995 -0.18399999999999994 0.034499999999999996" euler="1.5707963267948966 0.0 -0.0">
+                <joint name="base_Revolute-7" type="hinge" axis="0.0 3.1554436208840472e-30 1.0000000000000007" pos="5.551115123125783e-17 6.938893903907173e-18 -0.018999999999999947" />
+                <geom name="RL_geom" type="mesh" mesh="RL" pos="0 0 0" euler="0 0 0" />
+                <inertial mass="8.699180035251814" pos="-3.552713678800501e-17 -4.884981308350692e-17 1.5414283107572988e-46" fullinertia="0.02444621266938879 0.024446212669389046 0.04622270375553705 -6.245004513516509e-17 1.970575965456774e-46 -1.3877787807814406e-17" />
+            </body>
+            <site name="imu_site" pos="0 0 0.05" />
+            <camera name="front_cam" pos="-0.25 0 0.15" quat="0.5 0.5 0.5 0.5" fovy="60" />
+        </body>
+    </worldbody>
+    <actuator>
+        <velocity name="FL_motor" joint="base_Revolute-4" gear="1" kv="10" ctrlrange="-10 10" />
+        <velocity name="FR_motor" joint="base_Revolute-5" gear="-1" kv="10" ctrlrange="-10 10" />
+        <velocity name="RR_motor" joint="base_Revolute-6" gear="-1" kv="10" ctrlrange="-10 10" />
+        <velocity name="RL_motor" joint="base_Revolute-7" gear="1" kv="10" ctrlrange="-10 10" />
+    </actuator>
+    <sensor>
+        <gyro name="imu_gyro" site="imu_site" />
+        <accelerometer name="imu_accel" site="imu_site" />
+        <jointpos name="encoder_FL_pos" joint="base_Revolute-4" />
+        <jointpos name="encoder_FR_pos" joint="base_Revolute-5" />
+        <jointpos name="encoder_RR_pos" joint="base_Revolute-6" />
+        <jointpos name="encoder_RL_pos" joint="base_Revolute-7" />
+        <jointvel name="encoder_FL_vel" joint="base_Revolute-4" />
+        <jointvel name="encoder_FR_vel" joint="base_Revolute-5" />
+        <jointvel name="encoder_RR_vel" joint="base_Revolute-6" />
+        <jointvel name="encoder_RL_vel" joint="base_Revolute-7" />
+    </sensor>
+</mujoco>
