@@ -181,7 +181,7 @@ def main():
     mujoco.mj_forward(model, data)
 
     # 2. Get Site and Target Mocap IDs
-    site_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "attachment_site")
+    site_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "pinch")
     init_eef_pos = data.site_xpos[site_id].copy()
 
     # Target Mocap body for real-time visualization
@@ -204,7 +204,7 @@ def main():
 
     controller = CartesianIKController(
         model=model,
-        site_name="attachment_site",
+        site_name="pinch",
         home_qpos=data.qpos[:6].copy(),
         kp_pos=20.0,       # Fast position convergence
         kp_ori=15.0,       # Fast orientation convergence
@@ -215,7 +215,7 @@ def main():
     controller.reset(data.qpos[:6].copy())
 
     # Pre-sample path points for 3D visual preview in viewer
-    preview_path_points = traj_gen.sample_path(num_points=120)
+    preview_path_points = traj_gen.sample_path(num_points=240 if args.traj == "spiral" else 120)
 
     print("=" * 70)
     print(f" UR5e 6-DOF Cartesian Target Trajectory Tracking [{args.traj.upper()}]")
@@ -288,10 +288,10 @@ def main():
                 q_list.append(curr_q)
                 qdot_list.append(curr_qdot)
 
-                # Keep a rolling trail of actual end-effector positions (last 100 points)
+                # Keep a rolling trail of actual end-effector positions (last 400 points)
                 if int(t / dt) % 20 == 0:
                     eef_trail.append(curr_pos.copy())
-                    if len(eef_trail) > 100:
+                    if len(eef_trail) > 400:
                         eef_trail.pop(0)
 
                 # Render trajectory preview and live trail in viewer

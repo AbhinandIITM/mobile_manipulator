@@ -96,7 +96,10 @@ class CartesianIKController:
 
         # 4. Compute Site Jacobian (6 x nv)
         mujoco.mj_jacSite(self.model, data, self.jacp, self.jacr, self.site_id)
-        J = np.vstack([self.jacp, self.jacr])  # (6, 6)
+        
+        # Only use the arm joints for IK (first nv_arm joints)
+        nv_arm = len(self.home_qpos)
+        J = np.vstack([self.jacp[:, :nv_arm], self.jacr[:, :nv_arm]])  # (6, nv_arm)
 
         # 5. Damped Least Squares (DLS) Pseudo-inverse: J_dls = J^T (J J^T + lambda^2 I)^-1
         lambda_sq = (self.damping ** 2) * np.eye(6)
@@ -104,7 +107,7 @@ class CartesianIKController:
 
         # 6. Nullspace Posture Control (pulls reference toward nominal home configuration)
         q_null = self.k_null * (self.home_qpos - self.q_target)
-        N = np.eye(self.model.nv) - J_dls @ J
+        N = np.eye(nv_arm) - J_dls @ J
         qdot_null = N @ q_null
 
         # 7. Total Joint Velocity Command

@@ -1,5 +1,5 @@
 <mujoco model="ur5e_scene">
-  <include file="ur5e.xml"/>
+  <include file="ur5e_gripper.xml"/>
 
   <statistic center="0 0 0.4" extent="1.2"/>
 

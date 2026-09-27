@@ -148,7 +148,10 @@ class TrajectoryGenerator:
         """
         Samples the 3D trajectory path for visualization in MuJoCo viewer.
         """
-        t_vals = np.linspace(0, self.period, num_points, endpoint=False)
+        # The spiral trajectory takes twice the nominal period to complete a full elevation cycle
+        cycle_period = self.period * 2.0 if self.traj_type == "spiral" else self.period
+        
+        t_vals = np.linspace(0, cycle_period, num_points, endpoint=False)
         pts = np.zeros((num_points, 3))
         for i, t in enumerate(t_vals):
             pts[i], _ = self._nominal_traj(t)
