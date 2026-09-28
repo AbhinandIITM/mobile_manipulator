@@ -40,8 +40,7 @@ def main():
         max_qdot=1.5,
     )
     
-    mocap_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "target")
-    mocap_id = model.body_mocapid[mocap_id]
+    mocap_id = -1
 
     dt = model.opt.timestep
 
@@ -94,7 +93,7 @@ def main():
                     print("Moving down to grasp...")
                     
                     # Capture wrist camera image before descending
-                    renderer.update_scene(data, camera="wrist_cam")
+                    renderer.update_scene(data, camera="d435i_color")
                     img = renderer.render()
                     try:
                         from PIL import Image

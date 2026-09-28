@@ -246,7 +246,7 @@
                           </body>
                         </body>
                       </body>
-                      <body name="d435i" childclass="d435i" pos="0.04 0 0.0" euler="0 -0.15 1.5708">
+                      <body name="d435i" childclass="d435i" pos="0.05 0 0.0" euler="0 0 1.5708">
                         <geom mesh="d435i_0" material="d435i_IR_Lens" class="d435i_visual" />
                         <geom mesh="d435i_1" material="d435i_IR_Emitter_Lens" class="d435i_visual" />
                         <geom mesh="d435i_2" material="d435i_IR_Rim" class="d435i_visual" />
