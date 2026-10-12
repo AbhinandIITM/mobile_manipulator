@@ -3,3 +3,12 @@
 /log
 *.stl
 *.dae
+**/__pycache__/
+*.pyc
+*.zip
+*.tar
+*.gz
+*.rar
+*.7z
+sarvam2_30b_a2b_4_Version_1.zip
+ur5e/laya_agent/laya_expert_dataset.jsonl

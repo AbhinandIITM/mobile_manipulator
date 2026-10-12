@@ -49,6 +49,7 @@
             </body>
             <site name="imu_site" pos="0 0 0.05" />
             <camera name="front_cam" pos="-0.25 0 0.15" quat="0.5 0.5 0.5 0.5" fovy="60" />
+            <camera name="third_person_cam" pos="1.5 0 1.0" xyaxes="0 1 0 -0.371 0 0.928" fovy="75" />
         </body>
     </worldbody>
     <actuator>

@@ -1,0 +1,48 @@
+<mujoco model="mobile_manipulator_scene">
+  <include file="mobile_manipulator.xml"/>
+
+  <statistic center="0 1 0.4" extent="3.0"/>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.1 0.1 0.1" specular="0 0 0"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <global azimuth="135" elevation="-25"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="512"/>
+    <texture name="texplane" type="2d" builtin="checker" rgb1=".2 .3 .4" rgb2=".1 0.15 0.2" width="512" height="512" mark="cross" markrgb=".8 .8 .8"/>
+    <material name="matplane" reflectance="0.2" texture="texplane" texrepeat="20 20" texuniform="true"/>
+    <material name="table_wood" rgba="0.6 0.4 0.25 1" reflectance="0.1"/>
+    <material name="bin_mat" rgba="0.2 0.4 0.8 0.8"/>
+  </asset>
+
+  <worldbody>
+    <geom name="floor" pos="0 0 0" size="20 20 0.1" type="plane" material="matplane"/>
+    <light directional="true" diffuse="0.5 0.5 0.5" specular="0.2 0.2 0.2" pos="0 0 5" dir="0 0 -1" castshadow="false"/>
+    <light mode="targetbodycom" target="chassis" directional="false" diffuse="0.8 0.8 0.8" specular="0.3 0.3 0.3" pos="0 0 4.0" dir="0 0 -1"/>
+    <light directional="false" diffuse="0.9 0.9 0.9" specular="0.3 0.3 0.3" pos="-2.5 0.0 2.2" dir="0 0 -1"/>
+
+    <!-- Staging Table where the target block is placed -->
+    <!-- Positioned 2.5 meters ahead of robot's start -->
+    <body name="staging_table" pos="-2.5 0.0 0.15">
+      <geom name="table_top" type="box" size="0.4 0.6 0.15" material="table_wood" friction="0.8"/>
+    </body>
+
+    <!-- Target Red Block on the table -->
+    <body name="target_block" pos="-2.35 -0.05 0.325">
+      <freejoint/>
+      <geom name="block_geom" type="box" size="0.025 0.025 0.025" rgba="0.85 0.15 0.15 1" friction="1.2 0.005 0.0001" mass="0.1"/>
+    </body>
+
+    <!-- Receptacle Drop Box on the staging table -->
+    <body name="table_drop_box" pos="-2.35 0.22 0.30">
+      <geom name="bin_bottom" type="box" size="0.08 0.08 0.005" pos="0 0 0.005" rgba="0.2 0.6 0.85 1.0" friction="0.8"/>
+      <geom name="bin_wall_left" type="box" size="0.08 0.006 0.03" pos="0 -0.074 0.03" rgba="0.15 0.5 0.75 1.0"/>
+      <geom name="bin_wall_right" type="box" size="0.08 0.006 0.03" pos="0 0.074 0.03" rgba="0.15 0.5 0.75 1.0"/>
+      <geom name="bin_wall_front" type="box" size="0.006 0.068 0.03" pos="0.074 0 0.03" rgba="0.15 0.5 0.75 1.0"/>
+      <geom name="bin_wall_back" type="box" size="0.006 0.068 0.03" pos="-0.074 0 0.03" rgba="0.15 0.5 0.75 1.0"/>
+    </body>
+
+  </worldbody>
+</mujoco>

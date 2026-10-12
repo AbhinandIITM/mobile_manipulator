@@ -184,6 +184,7 @@ def main():
     )
 
     renderer = mujoco.Renderer(model, height=240, width=320)
+    renderer_tp = mujoco.Renderer(model, height=480, width=640)
 
     waypoint_list = [
         np.array([5.0, 2.5, 0.3]),
@@ -274,8 +275,12 @@ def main():
                 guidance.update_vision(latest_detection, t)
 
                 if not args.no_cv and not args.headless:
+                    renderer_tp.update_scene(data, camera="third_person_cam")
+                    third_person_frame = renderer_tp.render()
+
                     hud_frame = detector.build_hud_frame(rgb_frame, depth_frame, latest_detection, latest_telem)
                     cv2.imshow("J100 CLF-CBF Guidance HUD", hud_frame)
+                    cv2.imshow("J100 Third Person View", cv2.cvtColor(third_person_frame, cv2.COLOR_RGB2BGR))
                     if cv2.waitKey(1) & 0xFF == 27:
                         break
 

@@ -8,7 +8,7 @@ os.environ["HF_HUB_OFFLINE"] = "1"
 from laya import Router
 
 from robot_skills import solve_ik_vla, get_target_rot_down
-from perception import get_scene_state_json
+from perception import get_scene_state_json, detect_red_blob
 
 print("Loading Laya Decision Engine...")
 # Initialize Laya Router
@@ -29,10 +29,10 @@ from pydantic import BaseModel, Field
 from laya.structured import decide
 
 class ContinuousAction(BaseModel):
-    dx_cm: int = Field(description="Target delta movement along X axis in cm (-4 to 5). Negative is left.", ge=-4, le=5)
-    dy_cm: int = Field(description="Target delta movement along Y axis in cm (-4 to 5). Negative is back.", ge=-4, le=5)
-    dz_cm: int = Field(description="Target delta movement along Z axis in cm (-4 to 5). Negative is down.", ge=-4, le=5)
-    close_gripper: bool = Field(description="True if gripper should close (when near the block).")
+    dx_cm: int = Field(description="Must match 'target_dx_cm' from the state exactly.", ge=-4, le=5)
+    dy_cm: int = Field(description="Must match 'target_dy_cm' from the state exactly.", ge=-4, le=5)
+    dz_cm: int = Field(description="Must match 'target_dz_cm' from the state exactly.", ge=-4, le=5)
+    close_gripper: bool = Field(description="True if 'dist_xy_meters' < 0.05 and 'height_above_block_meters' < 0.05, else False.")
 
 import cv2
 import numpy as np
@@ -44,12 +44,16 @@ renderer = mujoco.Renderer(model, height=480, width=640)
 
 # Logging for plots
 t_list = []
+block_x_list = []
+block_y_list = []
 block_z_list = []
+gripper_x_list = []
+gripper_y_list = []
 gripper_z_list = []
-prob_hover_list = []
-prob_descend_list = []
-prob_close_list = []
-prob_lift_list = []
+cmd_dx = []
+cmd_dy = []
+cmd_dz = []
+cmd_close = []
 
 with mujoco.viewer.launch_passive(model, data) as viewer:
     
@@ -68,12 +72,21 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
         
         # Log data
         t_list.append(data.time)
-        block_z_list.append(data.xpos[model.body('target_block').id][2])
-        gripper_z_list.append(data.site_xpos[model.site('pinch').id][2])
-        prob_hover_list.append(0.0) # Dummy for plot compatibility
-        prob_descend_list.append(0.0)
-        prob_close_list.append(1.0 if action["close_gripper"] else 0.0)
-        prob_lift_list.append(0.0)
+        block_pos = data.xpos[model.body('target_block').id]
+        pinch_pos = data.site_xpos[model.site('pinch').id]
+        
+        block_x_list.append(block_pos[0])
+        block_y_list.append(block_pos[1])
+        block_z_list.append(block_pos[2])
+        
+        gripper_x_list.append(pinch_pos[0])
+        gripper_y_list.append(pinch_pos[1])
+        gripper_z_list.append(pinch_pos[2])
+        
+        cmd_dx.append(action["dx_cm"])
+        cmd_dy.append(action["dy_cm"])
+        cmd_dz.append(action["dz_cm"])
+        cmd_close.append(1.0 if action["close_gripper"] else 0.0)
         
         # 3. Execution (Continuous IK target generation)
         dx = action["dx_cm"] / 100.0
@@ -112,7 +125,11 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
             # Render and display camera safely
             renderer.update_scene(data, camera="d435i_color")
             img_rgb = renderer.render()
-            cv2.imshow("Wrist Camera", cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR))
+            
+            # Draw CV bounding box on the image using our perception pipeline
+            _, _, img_bgr, _ = detect_red_blob(img_rgb)
+            
+            cv2.imshow("Wrist Camera", img_bgr)
             cv2.waitKey(1)
             
     
@@ -122,27 +139,53 @@ cv2.destroyAllWindows()
 if len(t_list) > 10:
     import matplotlib.pyplot as plt
 
-    fig, axs = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
+    fig = plt.figure(figsize=(16, 10))
+    fig.suptitle("Laya Autonomous VLA Grasping Analysis", fontsize=16, fontweight='bold')
     
-    # 1. Plot trajectories (Block vs Gripper Z)
-    axs[0].plot(t_list, block_z_list, label="Block Z", color='red')
-    axs[0].plot(t_list, gripper_z_list, label="Gripper Z", color='blue', linestyle='--')
-    axs[0].set_ylabel("Height (m)")
-    axs[0].set_title("Laya Autonomous Grasping - Z Trajectories")
-    axs[0].legend()
-    axs[0].grid(True)
+    # 1. 3D Trajectory (Top-Left)
+    ax1 = fig.add_subplot(2, 2, 1, projection='3d')
+    ax1.plot(block_x_list, block_y_list, block_z_list, label="Block Position", color='red', linestyle='--')
+    ax1.plot(gripper_x_list, gripper_y_list, gripper_z_list, label="Gripper Trajectory", color='blue')
+    ax1.set_xlabel("X [m]")
+    ax1.set_ylabel("Y [m]")
+    ax1.set_zlabel("Z [m]")
+    ax1.set_title("3D Search & Grasp Path")
+    ax1.legend()
     
-    # 2. Plot skill probabilities
-    axs[1].plot(t_list, prob_hover_list, label="HOVER Prob", color='gray')
-    axs[1].plot(t_list, prob_descend_list, label="DESCEND Prob", color='orange')
-    axs[1].plot(t_list, prob_close_list, label="CLOSE_GRIPPER Prob", color='green')
-    axs[1].plot(t_list, prob_lift_list, label="LIFT Prob", color='purple')
-    axs[1].set_xlabel("Time (s)")
-    axs[1].set_ylabel("Probability")
-    axs[1].set_title("Laya Skill Probabilities Over Time")
-    axs[1].legend()
-    axs[1].grid(True)
+    # 2. Z Elevation (Top-Right)
+    ax2 = fig.add_subplot(2, 2, 2)
+    ax2.plot(t_list, block_z_list, label="Object Z", color='green', linewidth=2)
+    ax2.plot(t_list, gripper_z_list, label="Actual EEF Z", color='blue', linewidth=2)
+    ax2.set_xlabel("Time [s]")
+    ax2.set_ylabel("Z [m]")
+    ax2.set_title("Z Elevation (EEF vs Object)")
+    ax2.grid(True)
+    ax2.legend()
+    
+    # 3. Laya Commands (Bottom-Left)
+    ax3 = fig.add_subplot(2, 2, 3)
+    ax3.plot(t_list, cmd_dx, label="Cmd dX [cm]", color='m')
+    ax3.plot(t_list, cmd_dy, label="Cmd dY [cm]", color='c')
+    ax3.plot(t_list, cmd_dz, label="Cmd dZ [cm]", color='y')
+    ax3.axhline(0, color='black', linestyle='--', linewidth=1)
+    ax3.set_xlabel("Time [s]")
+    ax3.set_ylabel("Delta [cm]")
+    ax3.set_title("Laya LLM Output Commands")
+    ax3.grid(True)
+    ax3.legend()
+    
+    # 4. Gripper Actuation (Bottom-Right)
+    ax4 = fig.add_subplot(2, 2, 4)
+    # Scale binary close_gripper (0/1) to 0-255 range for plot visual parity
+    cmd_close_scaled = [c * 255.0 for c in cmd_close]
+    ax4.plot(t_list, cmd_close_scaled, label="Gripper CMD (0-255)", color='black')
+    ax4.set_xlabel("Time [s]")
+    ax4.set_ylabel("Command Signal")
+    ax4.set_title("Gripper Actuation")
+    ax4.grid(True)
+    ax4.legend()
     
     plt.tight_layout()
-    plt.savefig("laya_grasping_analysis.png")
-    print("Saved metrics plot to laya_grasping_analysis.png")
+    plt.subplots_adjust(top=0.92)
+    plt.savefig("laya_continuous_analysis.png")
+    print("Saved metrics plot to laya_continuous_analysis.png")

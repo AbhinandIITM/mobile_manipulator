@@ -6,9 +6,40 @@ import matplotlib.pyplot as plt
 import mujoco
 import mujoco.viewer
 import numpy as np
+import json
+import requests
 
 from los_guidance import LOSGuidanceSystem, VisualDetector
 from sensors import SensorManager
+
+
+
+LLM_PROMPT = """You are a robotic commander for the J100 skid-steer mobile robot.
+Convert the user's natural language command into the following JSON format for the robot's next target waypoint in meters.
+Format:
+{
+  "action": "move_to_waypoint",
+  "x": float,
+  "y": float
+}
+Do not output anything except the JSON.
+User: {prompt}
+JSON:"""
+
+def call_ollama_planner(prompt):
+    url = "http://localhost:11434/api/generate"
+    payload = {
+        "model": "deepseek-r1:8b",
+        "prompt": LLM_PROMPT.format(prompt=prompt),
+        "stream": False,
+        "format": "json"
+    }
+    try:
+        response = requests.post(url, json=payload).json()
+        return json.loads(response['response'])
+    except Exception as e:
+        print(f"Ollama generation failed: {e}")
+        return None
 
 
 def plot_los_analysis(
@@ -115,8 +146,8 @@ def main():
         "--scenario",
         type=str,
         default="waypoints",
-        choices=["static", "moving", "waypoints"],
-        help="Target scenario: 'static', 'moving', or 'waypoints'",
+        choices=["static", "moving", "waypoints", "llm"],
+        help="Target scenario: 'static', 'moving', 'waypoints', or 'llm'",
     )
     parser.add_argument("--v_max", type=float, default=2.0, help="Max cruising forward velocity (m/s)")
     parser.add_argument("--d_stop", type=float, default=None, help="Target standoff distance in meters (default: 0.80m)")
@@ -155,7 +186,7 @@ def main():
         target_dist = args.d_stop
     elif args.scenario == "moving":
         target_dist = 0.80   # Default 0.80m standoff for moving targets
-    elif args.scenario == "waypoints":
+    elif args.scenario in ["waypoints", "llm"]:
         target_dist = 0.50   # 0.50m waypoint standoff
     else:
         target_dist = 0.80   # 0.80m static target docking
@@ -176,7 +207,10 @@ def main():
     # Offscreen Camera Renderer for 30 Hz Vision Pipeline
     renderer = mujoco.Renderer(model, height=240, width=320)
 
-    # Target Waypoints for 'waypoints' scenario
+    # Offscreen Camera Renderer for Third-Person View
+    renderer_tp = mujoco.Renderer(model, height=480, width=640)
+
+    # Target Waypoints for 'waypoints' or 'llm' scenario
     waypoint_list = [
         np.array([5.0, 2.5, 0.3]),
         np.array([8.0, -3.0, 0.3]),
@@ -184,6 +218,26 @@ def main():
         np.array([0.0, 0.0, 0.3]),
     ]
     current_wp_idx = 0
+
+    if args.scenario == "llm":
+        print("\\nStarting J100 LLM Waypoint Planner (DeepSeek R1)...")
+        user_prompts = [
+            "Move the robot to x=5.0, y=2.5",
+            "Now go left to x=8, y=-3",
+            "Navigate down to x=2, y=-4.5",
+            "Return back to origin at x=0, y=0"
+        ]
+
+        print(f"\\nUser: '{user_prompts[0]}'")
+        print("Thinking... (deepseek-r1:8b)")
+        resp = call_ollama_planner(user_prompts[0])
+        waypoint_list = []
+        if resp and resp.get("action") == "move_to_waypoint":
+            waypoint_list.append(np.array([float(resp["x"]), float(resp["y"]), 0.3]))
+            print(f"LLM produced waypoint: {waypoint_list[0][:2]}")
+        else:
+            waypoint_list.append(np.array([5.0, 2.5, 0.3])) # fallback
+
 
     print("=" * 70)
     print(f" J100 Line-of-Sight (LOS) Guidance Initialized [{args.scenario.upper()}]")
@@ -239,13 +293,29 @@ def main():
                     beacon_pos = np.array([6.0, 3.0, 0.3])
                 elif args.scenario == "moving":
                     beacon_pos = np.array([4.0 + 3.0 * np.cos(0.3 * t), 3.0 * np.sin(0.3 * t), 0.3])
-                elif args.scenario == "waypoints":
+                elif args.scenario in ["waypoints", "llm"]:
                     target_wp = waypoint_list[current_wp_idx]
                     beacon_pos = target_wp
                     dist_to_wp = np.linalg.norm(data.xpos[body_id][:2] - target_wp[:2])
                     if dist_to_wp < 1.5:
-                        current_wp_idx = (current_wp_idx + 1) % len(waypoint_list)
-                        next_wp = waypoint_list[current_wp_idx]
+                        if args.scenario == "llm":
+                            next_prompt_idx = (current_wp_idx + 1) % len(user_prompts)
+                            print(f"
+User: '{user_prompts[next_prompt_idx]}'")
+                            print("Thinking... (deepseek-r1:8b)")
+                            resp = call_ollama_planner(user_prompts[next_prompt_idx])
+                            if resp and resp.get("action") == "move_to_waypoint":
+                                new_wp = np.array([float(resp["x"]), float(resp["y"]), 0.3])
+                                waypoint_list.append(new_wp)
+                            else:
+                                new_wp = target_wp # keep current if fails
+                                waypoint_list.append(new_wp)
+                            print(f"LLM produced waypoint: {new_wp[:2]}")
+                            current_wp_idx += 1
+                            next_wp = new_wp
+                        else:
+                            current_wp_idx = (current_wp_idx + 1) % len(waypoint_list)
+                            next_wp = waypoint_list[current_wp_idx]
                         
                         # Compute shortest-arc bearing in robot frame
                         dx = next_wp[0] - data.xpos[body_id][0]
@@ -284,8 +354,13 @@ def main():
 
                 # 4. Display live OpenCV HUD window
                 if not args.no_cv:
+                    # 4a. Render Third-Person Camera
+                    renderer_tp.update_scene(data, camera="third_person_cam")
+                    third_person_frame = renderer_tp.render()
+
                     hud_frame = detector.build_hud_frame(rgb_frame, depth_frame, latest_detection, latest_telem)
                     cv2.imshow("J100 Onboard Vision Feed (RGB + Depth)", hud_frame)
+                    cv2.imshow("J100 Third Person View", cv2.cvtColor(third_person_frame, cv2.COLOR_RGB2BGR))
                     cv2.waitKey(1)
 
             # C. 500 Hz High-Rate Sensor & IMU Guidance Loop
